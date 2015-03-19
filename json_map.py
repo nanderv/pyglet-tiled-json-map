@@ -136,11 +136,6 @@ class TileLayer(BaseLayer):
                                                         group=self.group,
                                                         usage="static",
                                                         )
-        for key in self.sprites.keys():
-            if key not in in_use:
-                if self.sprites[key] is not None:
-                    self.sprites[key].delete()
-                del self.sprites[key]
 
 
 class ObjectGroup(BaseLayer):
@@ -233,15 +228,31 @@ class ObjectGroup(BaseLayer):
                                         y=self.h-obj["y"]+tileoffset[1],
                                         batch=self.map.batch,
                                         group=self.group,
-                                        usage="static",
+                                        usage="dynamic",
                                         )
-
+                    obj["sprite"] = sprite
                     self.sprites[(obj["x"], obj["y"])] = sprite
 
-        for key in self.sprites.keys():
-            if key not in in_use:
-                self.sprites[key].delete()
-                del self.sprites[key]
+    def move(self,object, d_x, d_y):
+
+        sprite = object["sprite"]
+        o_x = object["x"]
+        o_y = object["y"]
+        if "collision" in self.map.tilelayers.keys():
+            if(o_x, o_y) in self.map.tilelayers["collision"].sprites.keys():
+                return
+        sprite.x += d_x
+        sprite.y += d_y
+        object["x"] += d_x
+        object["y"] += d_y
+        self.sprites[(object["x"], object["y"])] = sprite
+
+        if (o_x,o_y) in  self.sprites.keys():
+            del self.sprites[(o_x,o_y)]
+
+
+
+
 
 
 class Tileset(object):
@@ -337,6 +348,8 @@ class Map(object):
     def invalidate(self):
         """Forces a batch update of the map."""
         self.set_viewport(self.x, self.y, self.w, self.h, True)
+    def move_viewport (self,x,y):
+        self.set_viewport(self.x+x,self.y+y,self.w,self.h)
 
     def set_viewport(self, x, y, w, h, force=False):
         """
@@ -364,6 +377,8 @@ class Map(object):
         for layer in self.layers:
             if layer.data["visible"]:
                 layer.set_viewport(self.x, self.y, self.w, self.h)
+    def move_focus(self,dx,dy):
+        self.set_focus(self.x+dx, self.y+dy)
 
     def set_focus(self, x, y):
         """Sets the focus in (x, y) world coordinates."""
